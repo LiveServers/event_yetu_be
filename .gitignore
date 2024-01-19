@@ -1,0 +1,6 @@
+/.env.development.local
+/.env.production.local
+/node_modules
+/.env
+/dist
+/.DS_Store

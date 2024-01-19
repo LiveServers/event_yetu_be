@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int    @id @default(autoincrement())
+  phoneNumber String? @unique
+  email String @unique
+  firstName String
+  lastName String
+  password String
+  avatar String?
+  role Role @default(USER)
+  creationDate DateTime
+  updateTime DateTime
+  createdEvents Event[] @relation("CreatedEvents")
+  bookedEvents Event[] @relation("BookedEvents")
+  eventsCreated Int @default(0)
+  ticketsBought Int @default(0)
+
+  @@index(fields: [email(sort: Desc)])
+}
+
+model Event {
+  id        Int    @id @default(autoincrement())
+  title String
+  description String
+  category EventCategory
+  tags String[]
+  media Media[] @relation("Media")
+  maxGuests Int?
+  location String
+  city String
+  country String
+  countryCode String 
+  latitude String?
+  longitude String?
+  isFree Boolean
+  draft Boolean @default(false)
+  ticketsBought Int @default(0)
+  eventStartDate DateTime
+  eventEndDate DateTime
+  creationDate DateTime
+  updateTime DateTime
+  creatorId Int
+  createdBy User @relation("CreatedEvents", fields:[creatorId], references: [id])
+  bookingId Int
+  bookedBy User? @relation("BookedEvents", fields:[bookingId], references: [id])
+  tickets Ticket[]
+}
+
+model Ticket {
+  id        Int     @id @default(autoincrement())
+  ticketName String
+  ticketDescription String
+  ticketPrice String
+  currency String
+  maxTickets Int
+  endOfSaleDate DateTime
+  ticketType String
+  creatorId Int
+  events Event @relation(fields: [creatorId], references: [id])
+  eventId Int
+  creationDate DateTime
+  updateTime DateTime
+}
+
+model Media {
+  id          Int   @id @default(autoincrement())
+  type MediaType
+  eventId Int
+  mediaBy Event  @relation("Media", fields:[eventId], references: [id])
+}
+
+model session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TicketType {
+  VIP
+  VVIP
+  EARLYBIRD
+  REGULAR
+  COUPLES
+  GROUPS
+}
+
+enum EventCategory {
+  MUSIC
+  VISUALARTS
+  PERFORMINGARTS
+  FILM
+  LECTURES_AND_BOOKS @map("LECTURES AND BOOKS")
+  FASHION
+  FOOD_AND_DRINK @map("FOOD AND DRINK")
+  FESTIVALS_AND_FAIRS @map("FESTIVALS AND FAIRS")
+  CHARITIES
+  SPORTS_AND_ACTIVE_LIFE @map("SPORTS AND ACTIVE LIFE")
+  NIGHTLIFE
+  FAMILY_AND_KIDS @map("FAMILY AND KIDS")
+  OTHER
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}

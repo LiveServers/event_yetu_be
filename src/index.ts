@@ -1,45 +1,18 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import express, { type NextFunction, type Request, type Response, type Application } from 'express'
 import dotenv from 'dotenv'
-// import { PrismaClient } from '@prisma/client'
 import cors from 'cors'
-// import session, { Session, SessionData } from 'express-session'
-import { expressjwt } from 'express-jwt'
 import helmet from 'helmet'
-// import connectPgSimple from 'connect-pg-simple'
-import { port, sessionSecret, environment, listOfOriginsAllowed } from './util/secrets'
-import mountRoutes from './routes'
+import { port, environment, listOfOriginsAllowed } from './util/secrets'
+import mountRoutes from './routers/index.router'
 
 // For env File
 dotenv.config()
-// const PostgresqlStore = connectPgSimple(session)
-// const sessionStore = new PostgresqlStore({
-//   conString: databaseConnectionUrl, // fallback
-//   createTableIfMissing: true
-// })
 
 const app: Application = express()
 
 app.set('port', port)
 app.use(express.json())
-// first layer of protection for token
-app.use(expressjwt({
-  secret: Buffer.from(sessionSecret, 'base64'),
-  algorithms: ['HS256'],
-  credentialsRequired: false
-}))
-// app.use(session({
-//   store: sessionStore,
-//   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-//   secret: sessionSecret,
-//   saveUninitialized: false,
-//   resave: false,
-//   cookie: {
-//     secure: environment === 'production',
-//     httpOnly: environment === 'production',
-//     maxAge: 7 * 24 * 60 * 60 * 1000 // ms 7days
-//   }
-// }))
 app.use(helmet({ contentSecurityPolicy: environment === 'production' ? undefined : false }))
 
 const originList = listOfOriginsAllowed.split(',')
@@ -52,21 +25,54 @@ app.use(cors(options))
 
 mountRoutes(app)
 
-const mapErrorNamesToMessage = (errName: string) => {
-  return {
-    PrismaClientKnownRequestError: 'An error occured, try again later',
-    PrismaClientUnknownRequestError: 'Unexpected error occured',
-    PrismaClientRustPanicError: 'Unexpected error occured',
-    PrismaClientInitializationError: 'Error when querying backend',
-    PrismaClientValidationError: 'Validation failed',
-    default: 'An error occured, kindly try again later'
-  }[errName]
+interface Result {
+  message: string
+  code: number
 }
-// handling the error thrown by express-jwt and cors packages(maybe others)
+
+const mapErrorNamesToMessage = (errName: string, error: string): Result => {
+  switch (errName) {
+    case 'PrismaClientKnownRequestError': return {
+      message: 'An error occured, try again later',
+      code: 500
+    }
+    case 'PrismaClientUnknownRequestError': return {
+      message: 'Unexpected error occured',
+      code: 500
+    }
+    case 'PrismaClientRustPanicError': return {
+      message: 'Unexpected error occured',
+      code: 500
+    }
+    case 'PrismaClientInitializationError': return {
+      message: 'Error when querying backend',
+      code: 500
+    }
+    case 'PrismaClientValidationError': return {
+      message: 'Validation failed',
+      code: 500
+    }
+    case 'NotFoundError': return {
+      message: 'Invalid details',
+      code: 422
+    }
+    case 'Error': return {
+      message: error,
+      code: 500
+    }
+    default: return {
+      message: 'An error occured, kindly try again later',
+      code: 500
+    }
+  }
+}
+/**
+ * TODO: - improve this error handling middleware
+ */
 app.use(function (err: Error, req: Request, res: Response, next: NextFunction) {
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  console.log('RUSTY', err.message)
-  res.status(500).json({ message: mapErrorNamesToMessage(err.name) })
+  console.log('MIDDLEWARE ERROR', err.message, err.name)
+  const { message, code } = mapErrorNamesToMessage(err.name, err.message)
+  res.status(code).json({ message, status: code })
 })
 
 app.get('/', (req: Request, res: Response) => {

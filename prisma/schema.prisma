@@ -19,6 +19,8 @@ model User {
   password String
   avatar String?
   role Role @default(USER)
+  isVerified Boolean @default(false)
+  personalKey String?
   creationDate DateTime
   updateTime DateTime
   createdEvents Event[] @relation("CreatedEvents")
@@ -26,7 +28,7 @@ model User {
   eventsCreated Int @default(0)
   ticketsBought Int @default(0)
 
-  @@index(fields: [email(sort: Desc)])
+  @@index(fields: [email(sort: Desc), id])
 }
 
 model Event {

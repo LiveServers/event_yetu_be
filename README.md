@@ -1,0 +1,3 @@
+- run the docker build -> docker compose up --build -d   
+- log into the db and do a migration for prisma - docker exec -it <db container name> psql -U <username>
+- if you've made changes to your schema.prisma, then do a migration - docker exec -it <server container name> npx prisma migrate dev --name <unique name>

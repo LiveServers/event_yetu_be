@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/non-nullable-type-assertion-style */
 /* eslint-disable max-len */
 import jwt, { type JwtPayload } from 'jsonwebtoken'
 import { type Request, type Response, type NextFunction } from 'express'
@@ -25,6 +26,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     jwt.verify(accessToken.replace('Bearer ', ''), Buffer.from(userData.personalKey as string, 'base64')) as JwtPayload
     req.role = userData.role
     req.email = userData.email
+    req.id = userData.id
     next()
   } catch (error) {
     return res.status(401).json({

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 /* eslint-disable max-len */
 /* eslint-disable @typescript-eslint/no-dynamic-delete */
@@ -6,18 +7,12 @@ import { PrismaClient } from '@prisma/client'
 import { validationResult } from 'express-validator'
 import bcrypt from 'bcrypt'
 import jwt, { type JwtPayload } from 'jsonwebtoken'
+import isEmpty from 'lodash.isempty'
 import { type CreateUser, type UpdateUser } from '../../interfaces/auth.interface'
 import { bcryptSaltRounds } from '../../util/secrets'
-import isEmpty from 'lodash.isempty'
+import excludeFields from '../../util/excludeFields'
 
 const prisma = new PrismaClient()
-
-const excludeFields = (entity: any, fields: any) => {
-  for (let i = 0; i < fields.length; i++) {
-    delete entity[fields[i]]
-  }
-  return entity
-}
 
 /**
  *
@@ -221,7 +216,7 @@ const refreshToken = async (req: Request, res: Response, next: NextFunction): Pr
       }
     })
 
-    const verified = jwt.verify(refreshToken.replace('refreshToken=', ''), Buffer.from(userData.personalKey as string, 'base64')) as JwtPayload
+    const verified = jwt.verify(refreshToken.replace('refreshToken=', ''), Buffer.from(userData.personalKey!, 'base64')) as JwtPayload
     // always update the secret key
     const salt = bcrypt.genSaltSync(Number(bcryptSaltRounds))
     await prisma.user.update({

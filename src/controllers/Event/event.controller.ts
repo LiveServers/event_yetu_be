@@ -4,17 +4,20 @@
  * I forgort to add ticket per order(minimun and maximum, like how many tickets can one person buy per ticket category?),
  * also a ticket category can be free, we will add that
  * - update events - DONE
- * - delete events
- * - search events
+ * - delete events - we will only delete an event that has had no bookings
+ * - search events - DONE
  * - fetch events - DONE
  * - purchase tickets
- * - s3 uploads
+ * - s3 uploads - DONE
  */
 import { type Request, type Response, type NextFunction } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { validationResult } from 'express-validator'
 import { type CreateEvent, type EditEvent } from '../../interfaces/event.interface'
 import excludeFields from '../../util/excludeFields'
+import AlgoliaSearch from '../../util/algoliaSearch'
+
+const algolia = new AlgoliaSearch()
 
 const prisma = new PrismaClient()
 
@@ -56,9 +59,25 @@ const createEvent = async (req: Request, res: Response, next: NextFunction): Pro
           }
         },
         include: {
-          tickets: true
+          tickets: {
+            select: {
+              id: true,
+              ticketName: true,
+              ticketDescription: true,
+              ticketPrice: true,
+              currency: true,
+              maxTickets: true,
+              ticketsBought: true,
+              endOfSaleDate: true,
+              ticketType: true,
+              eventStartDate: true,
+              eventEndDate: true,
+              updateTime: true
+            }
+          }
         }
       })
+      algolia.uploadRecord(result)
       res.status(200).json({
         status: 200,
         message: 'Event successfully created',
@@ -169,17 +188,36 @@ const editEvent = async (req: Request, res: Response, next: NextFunction): Promi
       }
       const tickets = [...eventBody.tickets]
       const newEventbody = Object.fromEntries(Object.entries(eventBody).filter(item => item[0] !== 'tickets')) as EditEvent
-      await prisma.event.update({
+      const result = await prisma.event.update({
         where: { id: Number(req.query.eventId) },
         data: { ...newEventbody,
           tickets: { updateMany: tickets.map(ticket => ({
             where: { id: ticket.id },
             data: { ...excludeFields(ticket, ['id']) }
-          })) } }
+          })) } },
+        include: {
+          tickets: {
+            select: {
+              id: true,
+              ticketName: true,
+              ticketDescription: true,
+              ticketPrice: true,
+              currency: true,
+              maxTickets: true,
+              ticketsBought: true,
+              endOfSaleDate: true,
+              ticketType: true,
+              eventStartDate: true,
+              eventEndDate: true,
+              updateTime: true
+            }
+          }
+        }
       })
+      algolia.uploadRecord(result)
       res.status(200).json({
         status: 200,
-        message: 'Event updated created'
+        message: 'Event updated successfully'
       })
     } else {
       res.status(422).json({ errors: errors.array() })
@@ -193,13 +231,36 @@ const editEvent = async (req: Request, res: Response, next: NextFunction): Promi
  *
  * @param {Object} req - The request object
  * @param {Object} res - The response object
- * @param {Object} req.body - The request body
- * @param {Object} req.query.id - The id
+ * @param {Object} req.query.search - The search parameter
  * @returns {Promise<void> | void}
  */
+const searchEvents = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const errors = validationResult(req)
+    if (errors.isEmpty()) {
+      const { search } = req.query // Extract search query from request query parameters
+      const response = await algolia.index.search(search)
+      const hitsWithoutHighlight = response?.hits.map((hit: any) => {
+        const { _highlightResult, objectID, ...rest } = hit
+        return rest
+      })
+      response.hits = hitsWithoutHighlight
+      res.status(200).json({
+        status: 200,
+        message: 'Events successfully fetched',
+        body: { ...response }
+      })
+    } else {
+      res.status(422).json({ errors: errors.array() })
+    }
+  } catch (e) {
+    next(e)
+  }
+}
 
 export default {
   createEvent,
   fetchEvents,
-  editEvent
+  editEvent,
+  searchEvents
 }

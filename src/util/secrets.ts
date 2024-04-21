@@ -13,3 +13,6 @@ export const secretAccessKey = process.env.SECRET_ACCESS_KEY
 export const region = process.env.REGION
 export const bucket = process.env.BUCKET
 export const key = process.env.KEY
+export const algoliaApplicationId = process.env.ALGOLIA_APPLICATION_ID
+export const algoliaApiKey = process.env.ALGOLIA_API_KEY
+export const algoliaIndexName = process.env.ALGOLIA_INDEX_NAME

@@ -4,7 +4,7 @@
  * I forgort to add ticket per order(minimun and maximum, like how many tickets can one person buy per ticket category?),
  * also a ticket category can be free, we will add that
  * - update events - DONE
- * - delete events - we will only delete an event that has had no bookings
+ * - delete events - DONE we will only delete an event that has had no bookings
  * - search events - DONE
  * - fetch events - DONE
  * - purchase tickets
@@ -15,7 +15,7 @@ import { PrismaClient } from '@prisma/client'
 import { validationResult } from 'express-validator'
 import { type CreateEvent, type EditEvent } from '../../interfaces/event.interface'
 import excludeFields from '../../util/excludeFields'
-import AlgoliaSearch from '../../util/algoliaSearch'
+import AlgoliaSearch from '../Algolia/algolia.controller'
 
 const algolia = new AlgoliaSearch()
 
@@ -258,9 +258,48 @@ const searchEvents = async (req: Request, res: Response, next: NextFunction): Pr
   }
 }
 
+/**
+ * @param {Object} req - The request object
+ * @param {Object} res - The response object
+ * @param {Object} req.params.id - The search parameter
+ * @returns {Promise<void> | void}
+ */
+const deleteEvent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const errors = validationResult(req)
+    if (errors.isEmpty()) {
+      const { id } = req.params // Extract search query from request query parameters
+      // first fetch data and make sure that no one has booked
+      const { tickets } = await prisma.event.findUniqueOrThrow({ where: { id: Number(id) }, include: { tickets: true } })
+      for (const ticket of tickets) {
+        if (ticket.ticketsBought > 0) {
+          throw new Error('Event cannot be deleted, a booking has been made')
+        }
+      }
+      // unlink tickets
+      await prisma.event.update({ where: { id: Number(id) },
+        data: {
+          tickets: { deleteMany: {} }
+        } })
+      // then delete the event
+      await prisma.event.delete({ where: { id: Number(id) } })
+      algolia.removeRecord(id) // remove the record from algolia
+      res.status(200).json({
+        status: 200,
+        message: 'Event deleted successfully'
+      })
+    } else {
+      res.status(422).json({ errors: errors.array() })
+    }
+  } catch (e) {
+    next(e)
+  }
+}
+
 export default {
   createEvent,
   fetchEvents,
   editEvent,
-  searchEvents
+  searchEvents,
+  deleteEvent
 }

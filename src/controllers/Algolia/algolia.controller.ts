@@ -1,11 +1,22 @@
-import excludeFields from './excludeFields'
-import { algoliaApiKey, algoliaApplicationId, algoliaIndexName } from './secrets'
+import excludeFields from '../../util/excludeFields'
+import { algoliaApiKey, algoliaApplicationId, algoliaIndexName } from '../../util/secrets'
 const algoliasearch = require('algoliasearch')
 
 interface Response {
   objectID: string
 }
 
+/**
+ *
+ * ##  Algolia Search Module ʲˢ
+* Impl of Algolia for Event Yetu Repo
+
+@example
+
+const algolia = new AlgoliaSearch()
+// Add a record to the index
+algolia.uploadRecord(record)
+ */
 class AlgoliaSearch {
   private readonly client: any
   readonly index: any

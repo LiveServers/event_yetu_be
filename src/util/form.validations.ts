@@ -128,3 +128,7 @@ export const editEventValidator = [
 export const searchEventsValidator = [
   check('search').notEmpty().withMessage('Search parameter is required').isString().withMessage('Search parameter should be a string')
 ]
+
+export const deleteEventValidator = [
+  check('id').notEmpty().withMessage('Id parameter is required').isString().withMessage('id parameter should be a string')
+]

@@ -132,3 +132,12 @@ export const searchEventsValidator = [
 export const deleteEventValidator = [
   check('id').notEmpty().withMessage('Id parameter is required').isString().withMessage('id parameter should be a string')
 ]
+
+export const mpesaRequestValidator = [
+  check('amount').notEmpty().withMessage('Amount is required').isString().withMessage('Amount should be a string'),
+  check('msisdn').notEmpty().withMessage('Msisdn is required').isString().withMessage('Msisdn should be a string').custom((msisdn, { req }) => {
+    const msisdnRegex = /^(?:254|\+254|0)?(7(?:(?:[129][0-9])|(?:0[0-8])|(4[0-1]))[0-9]{6})$/
+    if (new RegExp(msisdnRegex).test(msisdn)) return true
+    throw new Error('Msisdn is not valid')
+  })
+]

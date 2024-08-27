@@ -1,0 +1,13 @@
+# Use the official PostgreSQL 16 image as base
+FROM postgres:16
+
+# Set environment variables
+ENV POSTGRES_USER=postgres \
+    POSTGRES_PASSWORD=postgres \
+    POSTGRES_DB=postgres
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Create a volume for PostgreSQL data
+VOLUME /var/lib/postgresql/data
